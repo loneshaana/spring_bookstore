@@ -3,6 +3,7 @@ package services.impl;
 import domain.User;
 import domain.security.PasswordResetToken;
 import domain.security.UserRoles;
+import excetions.UserAlreadyExistsException;
 import org.springframework.stereotype.Service;
 import repositories.PasswordResetTokenRepository;
 import repositories.RoleRepository;
@@ -50,7 +51,7 @@ public class UserServiceImpl implements UserService {
     public User createUser(User user, Set<UserRoles> userRoles) throws Exception {
         User localUser = userRepository.findByUsername(user.getUsername());
         if(localUser != null){
-            throw new Exception("User Already Exists");
+            throw new UserAlreadyExistsException("User Already Exists");
         }else{
             for(UserRoles ur : userRoles){
                 roleRepository.save(ur.getRole());
