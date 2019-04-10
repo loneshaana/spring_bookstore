@@ -29,7 +29,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PasswordResetToken getPasswordResetToken(String token) {
-        return null;
+        return passwordResetTokenRepository.findByToken(token);
     }
 
     @Override

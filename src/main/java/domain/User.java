@@ -34,6 +34,8 @@ public class User extends BaseEntity implements UserDetails {
     private String phone;
     private boolean enabled=true;
 
+    private boolean isVerified = false;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<GrantedAuthority> grantedAuthorities = new HashSet<>();

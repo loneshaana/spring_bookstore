@@ -92,18 +92,21 @@ public class HomeController {
     @RequestMapping("newUser")
     public String newUser(Locale locale, @RequestParam("token") String token, Model model){
         PasswordResetToken passToken =  userService.getPasswordResetToken(token);
+
         if(passToken == null){
             System.out.println("Bad Request");
             model.addAttribute("message","Bad Request");
-            return null;
+            return "Token Is Invalid";
         }
+
         User user = passToken.getUser();
+        user.setVerified(true);
         String username = user.getUsername();
         UserDetails userDetails =  userSecurityService.loadUserByUsername(username);
         Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails,userDetails.getPassword(),userDetails.getAuthorities());
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
+        userService.save(user);
         return "User Verified";
     }
 }
