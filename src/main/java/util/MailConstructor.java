@@ -26,4 +26,15 @@ public class MailConstructor {
         simpleMailMessage.setFrom(environment.getProperty("support.email"));
         return  simpleMailMessage;
     }
+
+    public SimpleMailMessage constructForgotPasswordEmail(String contextPath ,Locale locale,String token,User user,String password){
+        String url = contextPath+"/changepassword?token"+token;
+        String message = "\nPlease click the above link to change you password,your new  password is "+password;
+        SimpleMailMessage simpleMailMessage = new SimpleMailMessage();
+        simpleMailMessage.setTo(user.getEmail());
+        simpleMailMessage.setSubject("Forgot password");
+        simpleMailMessage.setText(url+message);
+        simpleMailMessage.setFrom(environment.getProperty("support.email"));
+        return simpleMailMessage;
+    }
 }

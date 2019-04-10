@@ -10,6 +10,7 @@ import repositories.RoleRepository;
 import repositories.UserRepository;
 import services.UserService;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Service
@@ -48,6 +49,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Set<User> findAll(){
+        Set<User> users = new HashSet<>();
+        userRepository.findAll().forEach(users::add);
+        return users;
+    }
+
+    @Override
     public User createUser(User user, Set<UserRoles> userRoles) throws Exception {
         User localUser = userRepository.findByUsername(user.getUsername());
         if(localUser != null){
@@ -62,4 +70,8 @@ public class UserServiceImpl implements UserService {
         return localUser;
     }
 
+    @Override
+    public User save(User user){
+        return userRepository.save(user);
+    }
 }

@@ -11,10 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import services.UserService;
 import services.impl.UserSecurityService;
 import util.MailConstructor;
@@ -41,35 +38,10 @@ public class HomeController {
         this.mailConstructor = mailConstructor;
     }
 
-    @RequestMapping("login")
-    public String login(){
-        return "Login Page";
-    }
 
-    @PostMapping("newUser")
-    public String newUserPost(HttpServletRequest request, @RequestParam("username") String username, @RequestParam("userEmail") String userEmail) throws Exception{
-        System.out.println("Adding a new user");
-        User userWithUsername = userService.findByUsername(username);
-        User userWithEmail = userService.findByEmail(userEmail);
-
-        if(userWithUsername != null){
-            return  "username already exists!";
-        }
-
-        if(userWithEmail != null){
-            return  "email already exists!";
-        }
-
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(userEmail);
-
-        String pass = SecurityUtility.randomPassword();
-        String encryptPass = SecurityUtility.passwordEncoder().encode(pass);
-        user.setPassword(encryptPass);
-
+    private SimpleMailMessage make(HttpServletRequest request, User user, String roleName, String pass) throws Exception{
         Role role = new Role();
-        role.setFirstName("ROLE_USER");
+        role.setFirstName(roleName);
         Set<UserRoles> userRoles = new HashSet<>();
         userRoles.add(new UserRoles(user,role));
 
@@ -81,12 +53,72 @@ public class HomeController {
 
         String appUrl = "http://"+request.getServerName()+":"+request.getServerPort()+request.getContextPath();
 
-        System.out.println(appUrl);
-         // now send the mail
 
-        SimpleMailMessage email = mailConstructor.constructResetTokenEmail(appUrl,request.getLocale(),token,user,pass);
+        return mailConstructor.constructResetTokenEmail(appUrl,request.getLocale(),token,user,pass);
 
-        mailSender.send(email);
+    }
+
+    private SimpleMailMessage sendForgotPasswordMail(HttpServletRequest request,User user,String pass){
+        String token = UUID.randomUUID().toString();
+        String appUrl = "http://"+request.getServerName()+":"+request.getServerPort()+request.getContextPath();
+        userService.createPasswordResetTokenForUser(user,token);
+        return mailConstructor.constructForgotPasswordEmail(appUrl,request.getLocale(),token,user,pass);
+    }
+
+    @GetMapping("login")
+    public String login(){
+        return "Login Page";
+    }
+
+    @GetMapping("/users")
+    public Set<User> getAllUsers(){
+        return userService.findAll();
+    }
+
+    @GetMapping("/forgotPassword")
+    public String forgotPassword(HttpServletRequest request,@RequestParam String email){
+        User user = userService.findByEmail(email);
+        if(user != null){
+            // generate the new password
+            String pass = SecurityUtility.randomPassword();
+            String encodePass = SecurityUtility.passwordEncoder().encode(pass);
+            // update his db
+
+            user.setPassword(encodePass);
+            userService.save(user);
+
+            // then send him the token
+            SimpleMailMessage mail = sendForgotPasswordMail(request,user,pass);
+            mailSender.send(mail);
+            return "Password sent to your mail";
+        }
+        return "user not found";
+    }
+
+    @PostMapping("newUser")
+    public String newUserPost(HttpServletRequest request, @RequestParam("username") String username, @RequestParam("userEmail") String userEmail) throws Exception{
+        User userWithUsername = userService.findByUsername(username);
+        User userWithEmail = userService.findByEmail(userEmail);
+
+        if(userWithUsername != null){
+            return  "username already exists!";
+        }
+
+        if(userWithEmail != null){
+            return  "email already exists!";
+        }
+
+        String pass = SecurityUtility.randomPassword();
+        String passEncode = SecurityUtility.passwordEncoder().encode(pass);
+
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(userEmail);
+        user.setPassword(passEncode);
+
+        SimpleMailMessage makeMail = make(request,user,"USER_ROLE",pass);
+
+        mailSender.send(makeMail);
 
         return "User Created";
     }

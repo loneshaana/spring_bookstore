@@ -15,4 +15,8 @@ public interface UserService {
     User findByEmail(String email);
 
     User createUser(User user, Set<UserRoles> userRoles) throws Exception;
+
+    Set<User> findAll();
+
+    User save(User user);
 }

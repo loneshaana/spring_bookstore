@@ -35,8 +35,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             "/image/**",
             "/",
             "/myAccount",
-            "/newUser"
+            "/newUser",
+            "/users",
+            "/forgotPassword"
     };
+
+    @Autowired
+    public void configureGlobal1(AuthenticationManagerBuilder auth) throws Exception{
+        auth.inMemoryAuthentication();
+    }
+
 
     @Override
     public void configure(HttpSecurity http) throws Exception{
