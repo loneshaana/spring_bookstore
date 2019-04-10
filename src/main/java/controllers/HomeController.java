@@ -2,8 +2,6 @@ package controllers;
 
 import domain.User;
 import domain.security.PasswordResetToken;
-import domain.security.Role;
-import domain.security.UserRoles;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,16 +10,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import services.MailService;
 import services.UserService;
 import services.impl.UserSecurityService;
-import util.MailConstructor;
 import util.SecurityUtility;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
 
 @RestController
 @RequestMapping(name = "/")
@@ -29,40 +25,14 @@ public class HomeController {
     private final UserService userService;
     private final UserSecurityService userSecurityService;
     private final JavaMailSender mailSender;
-    private MailConstructor mailConstructor;
+    private MailService mailService;
 
-    public HomeController(UserService userService, UserSecurityService userSecurityService, JavaMailSender mailSender, MailConstructor mailConstructor) {
+    public HomeController(UserService userService, UserSecurityService userSecurityService, JavaMailSender mailSender,
+                           MailService mailService) {
         this.userService = userService;
         this.userSecurityService = userSecurityService;
         this.mailSender = mailSender;
-        this.mailConstructor = mailConstructor;
-    }
-
-
-    private SimpleMailMessage make(HttpServletRequest request, User user, String roleName, String pass) throws Exception{
-        Role role = new Role();
-        role.setFirstName(roleName);
-        Set<UserRoles> userRoles = new HashSet<>();
-        userRoles.add(new UserRoles(user,role));
-
-        User createdUser = userService.createUser(user,userRoles);
-
-        String token = UUID.randomUUID().toString(); // create the random Token
-
-        userService.createPasswordResetTokenForUser(user,token);// store the token to the respective user
-
-        String appUrl = "http://"+request.getServerName()+":"+request.getServerPort()+request.getContextPath();
-
-
-        return mailConstructor.constructResetTokenEmail(appUrl,request.getLocale(),token,user,pass);
-
-    }
-
-    private SimpleMailMessage sendForgotPasswordMail(HttpServletRequest request,User user,String pass){
-        String token = UUID.randomUUID().toString();
-        String appUrl = "http://"+request.getServerName()+":"+request.getServerPort()+request.getContextPath();
-        userService.createPasswordResetTokenForUser(user,token);
-        return mailConstructor.constructForgotPasswordEmail(appUrl,request.getLocale(),token,user,pass);
+        this.mailService = mailService;
     }
 
     @GetMapping("login")
@@ -82,14 +52,13 @@ public class HomeController {
             // generate the new password
             String pass = SecurityUtility.randomPassword();
             String encodePass = SecurityUtility.passwordEncoder().encode(pass);
-            // update his db
 
+            // update his db
             user.setPassword(encodePass);
             userService.save(user);
 
             // then send him the token
-            SimpleMailMessage mail = sendForgotPasswordMail(request,user,pass);
-            mailSender.send(mail);
+            mailService.sendForgotPasswordMail(request,user,pass);
             return "Password sent to your mail";
         }
         return "user not found";
@@ -115,10 +84,7 @@ public class HomeController {
         user.setUsername(username);
         user.setEmail(userEmail);
         user.setPassword(passEncode);
-
-        SimpleMailMessage makeMail = make(request,user,"USER_ROLE",pass);
-
-        mailSender.send(makeMail);
+        mailService.sendNewUserTokenMailConfirmation(request,user,"USER_ROLE",pass);
 
         return "User Created";
     }
